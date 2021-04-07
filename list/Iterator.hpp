@@ -4,13 +4,22 @@
 
 namespace ft
 {
-	template<typename Node, typename T>
+	template<class T, class Allocator >
+	struct s_node;
+
+	template<class T, class Allocator>
 	class iterator
 	{
-	public:     
+	public:
+		typedef struct s_node<T, Allocator> Node;
 		typedef T value_type;
 		typedef T* pointer;
 		typedef T& reference;
+
+		template <template <typename, typename> class const_iterator>
+		operator const_iterator<const value_type, Allocator>() {
+			return const_iterator<const value_type, Allocator>((s_node<const value_type, Allocator>*)_it);
+		}
 	private:
 		Node *_it;
 	public:
@@ -50,67 +59,48 @@ namespace ft
 		T *operator->() {return _it->__content;}
 	};
 
-	template<typename Node, typename T>
-	class const_iterator
-	{
-	public:     
-		typedef T value_type;
-		typedef T* pointer;
-		typedef T& reference;
-	private:
-		const Node *_it;
-	public:
-		const_iterator() : _it(NULL) {}
-		const_iterator(Node *it) : _it(it) {}
-		const_iterator(const const_iterator &copy) : _it(copy._it) {}
-		Node *getData() {return _it;}
-		reference operator*() { return *_it->__content; }
-		friend bool operator== (const const_iterator &c1, const const_iterator &c2) {
-			return c1._it == c2._it;
-		}
-		friend bool operator!= (const const_iterator &c1, const const_iterator &c2) {
-			return c1._it != c2._it;
-		}
-		T *operator->() {return _it->__content;}
-	};
-
-	template<typename Node, typename T>
+	template<class T, class Allocator>
 	class reverse_iterator
 	{
-	public:     
+	public:
+		typedef s_node<T, Allocator> Node;
+		typedef iterator<T, Allocator> iterator;
 		typedef T value_type;
 		typedef T* pointer;
 		typedef T& reference;
 	private:
-		Node *_it;
+		iterator _it;
 	public:
 		reverse_iterator() : _it(NULL) {}
-		reverse_iterator(Node *it) : _it(it) {}
+		reverse_iterator(const iterator &it) : _it(it) {}
 		reverse_iterator(const reverse_iterator &copy) : _it(copy._it) {}
 
 		reverse_iterator& operator=(const reverse_iterator &copy) {
 			_it = copy._it;
 			return *this;
 		}
-		reference operator*() { return *_it->__content; }
+		reference operator*() {
+			iterator tmp(_it);
+			--tmp;
+			return *tmp; 
+		}
 
 		reverse_iterator operator++() { 
-			_it = _it->__prev;
-			return *this; 
+			return --_it; 
 		}
 		reverse_iterator operator--() { 
-			_it = _it->__next;
-			return *this;
+			
+			return ++_it;
 		}
 		reverse_iterator operator++(int) {
-			reverse_iterator temp(*this);
-			++(*this);
-			return temp;
+			return _it--;
 		}
 		reverse_iterator operator--(int) {
-			reverse_iterator temp(*this);
-			--(*this);
-			return temp;
+			return _it++;
+		}
+
+		iterator base() {
+			return _it;
 		}
 
 		friend bool operator== (const reverse_iterator &c1, const reverse_iterator &c2) {
@@ -119,6 +109,9 @@ namespace ft
 		friend bool operator!= (const reverse_iterator &c1, const reverse_iterator &c2) {
 			return c1._it != c2._it;
 		}
-		Node *operator->() {return _it->__content;}
+		T *operator->() {return *_it;}
 	};
+
+	template<class T, class Allocator >
+	struct s_node;
 };

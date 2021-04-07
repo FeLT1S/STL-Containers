@@ -10,23 +10,20 @@ namespace ft
 	struct s_node {
 		typedef struct s_node* ptr;
 		typedef T value_type;
-		typedef Allocator allocator_type;
-		typedef typename allocator_type::reference reference;
-		typedef typename allocator_type::pointer pointer;
 
-		allocator_type __alloc;
+		Allocator __alloc;
 		value_type *__content;
 		ptr __prev;
 		ptr __next;
 
-		s_node(const Allocator& alloc = Allocator())
-		:  __alloc(alloc), 
+		s_node(const Allocator& alloc = Allocator()) :
+		__alloc(alloc), 
 		__prev(NULL), 
 		__next(NULL), 
 		__content(__alloc.allocate(1)){
 			*__content = T();
 		}
-		~s_node() {	
+		~s_node() {
 			__alloc.destroy(__content);
 			__alloc.deallocate(__content, 1);
 		}
@@ -37,11 +34,15 @@ namespace ft
 	{
 	public:
 		typedef struct s_node<T, Allocator> s_node;
-		typedef reverse_iterator<s_node, T> reverse_iterator;
-		typedef iterator<s_node, T> iterator;
-		typedef const_iterator<s_node, T> const_iterator;
+		typedef reverse_iterator<T, Allocator> reverse_iterator;
+		typedef iterator<const T, Allocator> const_iterator;
+		typedef iterator<T, Allocator> iterator;
 		typedef	std::allocator<s_node>	node_allocator;
 		typedef size_t size_type;
+		typedef Allocator allocator_type;
+		typedef typename allocator_type::reference reference;
+		typedef typename allocator_type::const_reference const_reference;
+		typedef typename allocator_type::pointer pointer;
 	protected:
 		node_allocator _node_alloc;
 		s_node* _head;
@@ -55,16 +56,26 @@ namespace ft
 			_head->__content = alloc.allocate(1);
 		}
 
-		explicit list(size_type count, const T& value = T(), const Allocator& alloc = Allocator()) : _head(_node_alloc.allocate(1)), _tail(_head) {
+		explicit list(size_type count, const T& value = T(), const Allocator& alloc = Allocator()) :
+		_head(_node_alloc.allocate(1)), 
+		_tail(_head) {
 			_node_alloc.construct(_head);
 			while (count--)
 				push_back(value);
 		}
 
-		// template< class InputIt >
-		// list( InputIt first, InputIt last, const Allocator& alloc = Allocator() ) : _head(_node_alloc.allocate(1)), _tail(_head) {
-		// 	_node_alloc.construct(_head);
-		// }
+		template <typename _Val, template< typename > class  _InputIterator>
+		list(_InputIterator <_Val> first, _InputIterator <_Val> last,
+		const allocator_type& alloc = allocator_type()) : 
+		_head(_node_alloc.allocate(1)),
+		_tail(_head)
+		{
+			while (first != last)
+			{
+				push_back(*first);
+				++first;
+			}
+		}
 
 		list( const list& copy ) : _head(_node_alloc.allocate(1)), _tail(_head) {
 			_node_alloc.construct(_head);
@@ -86,6 +97,34 @@ namespace ft
 				push_back(*tmp->__content);
 			return *this;
 		}
+		
+		void assign ( size_type count, const T & value ) {
+			if (_head != _tail) {
+				clear();
+			}
+			while (count--)
+				push_back(value);
+		}
+
+		void assign (iterator first, iterator last) {
+			if (_head != _tail) {
+				clear();
+			}
+			while (first != last)
+				push_back(*(first++));
+		}
+
+		allocator_type get_allocator() const {
+			return _head->__alloc;
+		}
+
+		const_reference front() const {
+			return *(_head->__content);
+		}
+
+		const_reference back() const {
+			return *(_tail->__prev->__content);
+		}
 
 		iterator begin() {
 			return iterator(_head);
@@ -96,11 +135,11 @@ namespace ft
 		}
 
 		reverse_iterator rbegin() {
-			return reverse_iterator(_tail->__prev);
+			return reverse_iterator(_tail);
 		}
 
 		reverse_iterator rend() {
-			return reverse_iterator(_head->__prev);
+			return reverse_iterator(_head);
 		}
 
 		void clear() {
@@ -284,6 +323,9 @@ namespace ft
 			node = it.getData();
 			tmp->__next = node;
 			node->__prev = _head;
+		}
+
+		void sort() {
 		}
 	};
 };
