@@ -6,37 +6,25 @@
 
 namespace ft
 {
-	template< class T, class Allocator>
+	template< class T>
 	struct s_node {
 		typedef struct s_node* ptr;
 		typedef T value_type;
 
-		Allocator __alloc;
-		value_type *__content;
+		value_type __content;
 		ptr __prev;
 		ptr __next;
-
-		s_node(const Allocator& alloc = Allocator()) :
-		__alloc(alloc), 
-		__prev(NULL), 
-		__next(NULL), 
-		__content(__alloc.allocate(1)){
-			*__content = T();
-		}
-		~s_node() {
-			__alloc.destroy(__content);
-			__alloc.deallocate(__content, 1);
-		}
 	};
 
 	template< class T, class Allocator = std::allocator<T> >
 	class list
 	{
 	public:
-		typedef struct s_node<T, Allocator> s_node;
-		typedef reverse_iterator<T, Allocator> reverse_iterator;
-		typedef iterator<const T, Allocator> const_iterator;
-		typedef iterator<T, Allocator> iterator;
+		typedef struct s_node<T> s_node;
+		typedef reverse_iterator<T> reverse_iterator;
+		typedef iterator<const T> const_iterator;
+		//typedef reverse_iterator<const T, Allocator> const_reverse_iterator;
+		typedef iterator<T> iterator;
 		typedef	std::allocator<s_node>	node_allocator;
 		typedef size_t size_type;
 		typedef Allocator allocator_type;
@@ -45,31 +33,38 @@ namespace ft
 		typedef typename allocator_type::pointer pointer;
 	protected:
 		node_allocator _node_alloc;
+		allocator_type alloc;
 		s_node* _head;
 		s_node* _tail;
 	public:
 		list() : _head(_node_alloc.allocate(1)), _tail(_head) {
-			_node_alloc.construct(_head);
+			_head->__prev = NULL;
+			_head->__next = NULL;
+			alloc.construct(&_head->__content, T());
 		}
 
 		explicit list(const Allocator& alloc) : _head(_node_alloc.allocate(1)), _tail(_head) {
-			_head->__content = alloc.allocate(1);
+			_head->__prev = NULL;
+			_head->__next = NULL;
+			_head->__content = 0;
 		}
 
 		explicit list(size_type count, const T& value = T(), const Allocator& alloc = Allocator()) :
 		_head(_node_alloc.allocate(1)), 
 		_tail(_head) {
-			_node_alloc.construct(_head);
+			_head->__prev = NULL;
+			_head->__next = NULL;
 			while (count--)
 				push_back(value);
 		}
 
-		template <typename _Val, template< typename > class  _InputIterator>
-		list(_InputIterator <_Val> first, _InputIterator <_Val> last,
-		const allocator_type& alloc = allocator_type()) : 
+		template <typename _Val, template< typename, typename > class  _InputIterator>
+		list(_InputIterator <_Val, Allocator> first, _InputIterator <_Val, Allocator> last, const allocator_type& alloc = allocator_type()) : 
 		_head(_node_alloc.allocate(1)),
 		_tail(_head)
 		{
+			_head->__prev = NULL;
+			_head->__next = NULL;
 			while (first != last)
 			{
 				push_back(*first);
@@ -78,14 +73,15 @@ namespace ft
 		}
 
 		list( const list& copy ) : _head(_node_alloc.allocate(1)), _tail(_head) {
-			_node_alloc.construct(_head);
+			_head->__prev = NULL;
+			_head->__next = NULL;
 			for (s_node * tmp = copy._head; tmp != copy._tail; tmp = tmp->__next)
-				push_back(*tmp->__content);
+				push_back(tmp->__content);
 		}
 
 		~list() {
 			clear();
-			_node_alloc.destroy(_tail);
+			alloc.destroy(&_tail->__content);
 			_node_alloc.deallocate(_tail, 1);
 		}
 
@@ -94,7 +90,7 @@ namespace ft
 				clear();
 			}
 			for (s_node * tmp = copy._head; tmp != copy._tail; tmp = tmp->__next)
-				push_back(*tmp->__content);
+				push_back(tmp->__content);
 			return *this;
 		}
 		
@@ -168,10 +164,10 @@ namespace ft
 			else {
 				s_node *new_node;
 				new_node = _node_alloc.allocate(1);
-				_node_alloc.construct(new_node);
+				alloc.construct(&new_node->__content, value);
 
 				s_node * prev = node->__prev;
-				*new_node->__content = value;
+				new_node->__content = value;
 				new_node->__prev = node->__prev;
 				new_node->__next = prev->__next;
 
@@ -200,14 +196,14 @@ namespace ft
 				_head = node->__next;
 			s_node *tmp = node->__prev;
 			node->__next->__prev = tmp;
-			_node_alloc.destroy(node);
+			alloc.destroy(&node->__content);
 			_node_alloc.deallocate(node, 1);
 			return pos;
 		}
 
 		iterator erase( iterator first, iterator last ) {
 			while (first != last)
-				erase(first++);
+				first = erase(first);
 			return last;
 		}
 
@@ -220,22 +216,20 @@ namespace ft
 		}
 
 		void push_back(T value) {
-			*_tail->__content = value;
 			s_node *node = _node_alloc.allocate(1);
-			_node_alloc.construct(node);
 			_tail->__next = node;
 			node->__next = NULL;
 			node->__prev = _tail;
+			alloc.construct(&_tail->__content, value);
 			_tail = node;
 		}
 
 		void push_front(T value) {
 			s_node *node = _node_alloc.allocate(1);
-			_node_alloc.construct(node);
 			_head->__prev = node;
 			node->__next = _head;
 			node->__prev = NULL;
-			*node->__content = value;
+			alloc.construct(&node->__content, value);
 			_head = node;
 		}
 
@@ -263,7 +257,7 @@ namespace ft
 			s_node *tmp = _head;
 			while (tmp != _tail && other._head != other._tail)
 			{
-				if (*tmp->__content > *other._head->__content)
+				if (tmp->__content > other._head->__content)
 					splice(tmp, other, other._head);
 				else
 					tmp = tmp->__next;
@@ -273,7 +267,18 @@ namespace ft
 		}
 
 		template <class Compare>
-		void merge( list& other, Compare comp );
+		void merge( list& other, Compare comp ) {
+			s_node *tmp = _head;
+			while (tmp != _tail && other._head != other._tail)
+			{
+				if (comp(*tmp->__content, *other._head->__content))
+					splice(tmp, other, other._head);
+				else
+					tmp = tmp->__next;
+			}
+			if (other._head != other._tail)
+				splice(tmp, other);
+		}
 
 		void splice( iterator pos, list& other ) {
 			splice(pos, other, other.begin(), other.end());
@@ -284,6 +289,8 @@ namespace ft
 		}
 
 		void splice( iterator pos, list& other, iterator first, iterator last) {
+			if (other.size() < 1)
+				return ;
 			s_node *node_pos = pos.getData();
 			s_node *node_first = first.getData();
 			s_node *node_last = last.getData()->__prev;
@@ -304,6 +311,8 @@ namespace ft
 		}
 
 		void reverse() {
+			if (size() < 2)
+				return ;
 			iterator it = begin();
 			s_node *node = NULL;
 
@@ -326,6 +335,96 @@ namespace ft
 		}
 
 		void sort() {
+			if (size() < 2)
+				return ;
+			for (iterator i = _head->__next; i != end(); ++i) {
+				for (iterator j = i; j != begin() && j.getData()->__prev->__content > *j; --j) {
+					T tmp = j.getData()->__prev->__content;
+					j.getData()->__prev->__content = *j;
+					*j = tmp;
+				}
+			}
+		}
+
+		template< class Compare >
+		void sort( Compare comp ) {
+			if (size() < 2)
+				return ;
+			for (iterator i = _head->__next; i != end(); ++i) {
+				for (iterator j = i; j != begin() && comp(j.getData()->__prev->__content, *j); --j) {
+					T tmp = *j.getData()->__prev->__content;
+					*j.getData()->__prev->__content = *j;
+					*j = tmp;
+				}
+			}
+		}
+
+		void unique() {
+			iterator i = begin();
+			iterator j;
+
+			while (i != end()) {
+				j = i;
+				++j;
+				if (*i == *j)
+					erase(j);
+				else
+					++i;
+			}
+		}
+
+		template< class BinaryPredicate >
+		void unique( BinaryPredicate p ) {
+			iterator i = begin();
+			iterator j;
+
+			while (i != end()) {
+				j = i;
+				++j;
+				if (p(*i, *j))
+					erase(j);
+				else
+					++i;
+			}
+		}
+
+		void remove( const T& value ) {
+			iterator i = begin();
+
+			while (i != end()) {
+				if (*i == value)
+					erase(i);
+				else
+					++i;
+			}
+		}
+
+		template< class UnaryPredicate >
+		void remove_if(UnaryPredicate p) {
+			iterator i = begin();
+
+			while (i != end()) {
+			if (p)
+				erase(i);
+			else
+				++i;
+			}
+		}
+
+		friend bool operator==( const ft::list<T,Allocator>& lhs, const ft::list<T,Allocator>& rhs ) {
+			iterator i = lhs.begin();
+			iterator j = rhs.begin();
+
+			while (i != lhs.end() && j != rhs.end())
+			{
+				if (*i != *j)
+					return false;
+				++i;
+				++j;
+			}
+			if (i != lhs.end() || j != rhs.end())
+				return false;
+			return true;
 		}
 	};
 };

@@ -4,21 +4,21 @@
 
 namespace ft
 {
-	template<class T, class Allocator >
+	template<class T>
 	struct s_node;
 
-	template<class T, class Allocator>
+	template<class T>
 	class iterator
 	{
 	public:
-		typedef struct s_node<T, Allocator> Node;
+		typedef s_node<T> Node;
 		typedef T value_type;
 		typedef T* pointer;
 		typedef T& reference;
 
-		template <template <typename, typename> class const_iterator>
-		operator const_iterator<const value_type, Allocator>() {
-			return const_iterator<const value_type, Allocator>((s_node<const value_type, Allocator>*)_it);
+		template <template <typename> class const_iterator>
+		operator const_iterator<const value_type>() {
+			return const_iterator<const value_type>((s_node<const value_type>*)_it);
 		}
 	private:
 		Node *_it;
@@ -31,7 +31,7 @@ namespace ft
 			_it = copy._it;
 			return *this;
 		}
-		reference operator*() { return *_it->__content; }
+		reference operator*() { return _it->__content; }
 		iterator operator++() { 
 			_it = _it->__next;
 			return *this; 
@@ -59,15 +59,17 @@ namespace ft
 		T *operator->() {return _it->__content;}
 	};
 
-	template<class T, class Allocator>
+	template<class T>
 	class reverse_iterator
 	{
 	public:
-		typedef s_node<T, Allocator> Node;
-		typedef iterator<T, Allocator> iterator;
+		typedef iterator<T> iterator;
 		typedef T value_type;
 		typedef T* pointer;
 		typedef T& reference;
+		// operator const_reverse_iterator<const value_type, Allocator>() {
+		// 	return const_reverse_iterator<const value_type, Allocator>((s_node<const value_type, Allocator>*)_it);
+		// };
 	private:
 		iterator _it;
 	public:
@@ -112,6 +114,6 @@ namespace ft
 		T *operator->() {return *_it;}
 	};
 
-	template<class T, class Allocator >
+	template<class T>
 	struct s_node;
 };
