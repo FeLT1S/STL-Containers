@@ -21,10 +21,10 @@ namespace ft
 	{
 	public:
 		typedef struct s_node<T> s_node;
-		typedef reverse_iterator<T> reverse_iterator;
 		typedef iterator<const T> const_iterator;
-		//typedef reverse_iterator<const T, Allocator> const_reverse_iterator;
 		typedef iterator<T> iterator;
+		typedef reverse_iterator<const_iterator> const_reverse_iterator;
+		typedef reverse_iterator<iterator> reverse_iterator;
 		typedef	std::allocator<s_node>	node_allocator;
 		typedef size_t size_type;
 		typedef Allocator allocator_type;
@@ -36,35 +36,43 @@ namespace ft
 		allocator_type alloc;
 		s_node* _head;
 		s_node* _tail;
+		size_type _size;
 	public:
 		list() : _head(_node_alloc.allocate(1)), _tail(_head) {
 			_head->__prev = NULL;
 			_head->__next = NULL;
+			_size = 0;
 			alloc.construct(&_head->__content, T());
 		}
 
-		explicit list(const Allocator& alloc) : _head(_node_alloc.allocate(1)), _tail(_head) {
+		explicit list(const Allocator& _alloc) : _head(_node_alloc.allocate(1)), _tail(_head) {
 			_head->__prev = NULL;
 			_head->__next = NULL;
-			_head->__content = 0;
+			_size = 0;
+			alloc = _alloc;
+			alloc.construct(&_head->__content, T());
 		}
 
-		explicit list(size_type count, const T& value = T(), const Allocator& alloc = Allocator()) :
+		explicit list(size_type count, const T& value = T(), const Allocator& _alloc = Allocator()) :
 		_head(_node_alloc.allocate(1)), 
 		_tail(_head) {
 			_head->__prev = NULL;
 			_head->__next = NULL;
+			_size = 0;
+			alloc = _alloc;
 			while (count--)
 				push_back(value);
 		}
 
-		template <typename _Val, template< typename, typename > class  _InputIterator>
-		list(_InputIterator <_Val, Allocator> first, _InputIterator <_Val, Allocator> last, const allocator_type& alloc = allocator_type()) : 
+		template <typename _Val, template< typename > class  _InputIterator>
+		list(_InputIterator <_Val > first, _InputIterator <_Val > last, const allocator_type& _alloc = allocator_type()) : 
 		_head(_node_alloc.allocate(1)),
 		_tail(_head)
 		{
 			_head->__prev = NULL;
 			_head->__next = NULL;
+			_size = 0;
+			alloc = _alloc;
 			while (first != last)
 			{
 				push_back(*first);
@@ -81,7 +89,6 @@ namespace ft
 
 		~list() {
 			clear();
-			alloc.destroy(&_tail->__content);
 			_node_alloc.deallocate(_tail, 1);
 		}
 
@@ -115,11 +122,11 @@ namespace ft
 		}
 
 		const_reference front() const {
-			return *(_head->__content);
+			return _head->__content;
 		}
 
 		const_reference back() const {
-			return *(_tail->__prev->__content);
+			return _tail->__prev->__content;
 		}
 
 		iterator begin() {
@@ -132,6 +139,10 @@ namespace ft
 
 		reverse_iterator rbegin() {
 			return reverse_iterator(_tail);
+		}
+
+		const_reverse_iterator rbegin() const {
+			return const_reverse_iterator(_head);
 		}
 
 		reverse_iterator rend() {
@@ -187,7 +198,7 @@ namespace ft
 				insert(pos, *first++);
 		}
 
-		iterator erase( iterator pos ) {
+		iterator erase(iterator pos) {
 			s_node * node = (pos++).getData();
 
 			if (node->__prev)
@@ -271,7 +282,7 @@ namespace ft
 			s_node *tmp = _head;
 			while (tmp != _tail && other._head != other._tail)
 			{
-				if (comp(*tmp->__content, *other._head->__content))
+				if (comp(tmp->__content, other._head->__content))
 					splice(tmp, other, other._head);
 				else
 					tmp = tmp->__next;
@@ -351,9 +362,9 @@ namespace ft
 			if (size() < 2)
 				return ;
 			for (iterator i = _head->__next; i != end(); ++i) {
-				for (iterator j = i; j != begin() && comp(j.getData()->__prev->__content, *j); --j) {
-					T tmp = *j.getData()->__prev->__content;
-					*j.getData()->__prev->__content = *j;
+				for (iterator j = i; j != begin() && !comp(j.getData()->__prev->__content, *j); --j) {
+					T tmp = j.getData()->__prev->__content;
+					j.getData()->__prev->__content = *j;
 					*j = tmp;
 				}
 			}
@@ -393,7 +404,7 @@ namespace ft
 
 			while (i != end()) {
 				if (*i == value)
-					erase(i);
+					i = erase(i);
 				else
 					++i;
 			}
@@ -404,8 +415,8 @@ namespace ft
 			iterator i = begin();
 
 			while (i != end()) {
-			if (p)
-				erase(i);
+			if (p(*i))
+				i = erase(i);
 			else
 				++i;
 			}
