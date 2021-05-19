@@ -133,7 +133,15 @@ namespace ft
 			return iterator(_head);
 		}
 
+		const_iterator begin() const {
+			return iterator(_head);
+		}
+
 		iterator end() {
+			return iterator(_tail);
+		}
+
+		const_iterator end() const{
 			return iterator(_tail);
 		}
 
@@ -142,11 +150,15 @@ namespace ft
 		}
 
 		const_reverse_iterator rbegin() const {
-			return const_reverse_iterator(_head);
+			return const_reverse_iterator(_tail);
 		}
 
 		reverse_iterator rend() {
 			return reverse_iterator(_head);
+		}
+
+		const_reverse_iterator rend() const {
+			return const_reverse_iterator(_head);
 		}
 
 		void clear() {
@@ -423,8 +435,8 @@ namespace ft
 		}
 
 		friend bool operator==( const ft::list<T,Allocator>& lhs, const ft::list<T,Allocator>& rhs ) {
-			iterator i = lhs.begin();
-			iterator j = rhs.begin();
+			const_iterator i = lhs.begin();
+			const_iterator j = rhs.begin();
 
 			while (i != lhs.end() && j != rhs.end())
 			{
@@ -436,6 +448,45 @@ namespace ft
 			if (i != lhs.end() || j != rhs.end())
 				return false;
 			return true;
+		}
+
+		friend bool operator!=( const ft::list<T,Allocator>& lhs,
+        const ft::list<T,Allocator>& rhs ) {
+			return !(lhs == rhs);
+		}
+
+		friend bool operator<( const ft::list<T,Allocator>& lhs,
+            const ft::list<T,Allocator>& rhs ) {
+			if (lhs.size() < rhs.size())
+				return true;
+			else if (lhs.size() > rhs.size())
+				return false;
+			else {
+				const_iterator j = rhs.begin();
+				for (const_iterator i = lhs.begin(); i != lhs.end(); ++i) {
+					if (*i < *j)
+						return true;
+					if (*i > *j)
+						return false;
+					++j;
+				}
+				return false;
+			}
+		}
+	
+		friend bool operator<=( const ft::list<T,Allocator>& lhs,
+        	const ft::list<T,Allocator>& rhs ) {
+			return !(rhs < lhs);
+		}
+
+		friend bool operator>( const ft::list<T,Allocator>& lhs,
+            const ft::list<T,Allocator>& rhs ) {
+			return rhs < lhs;
+		}
+		
+		friend bool operator>=( const ft::list<T,Allocator>& lhs,
+			const ft::list<T,Allocator>& rhs ) {
+			return !(lhs < rhs);
 		}
 	};
 };

@@ -15,7 +15,7 @@ namespace ft {
 		typedef size_t size_type;
 		typedef typename Allocator::reference reference;
 		typedef typename Allocator::const_reference const_reference;
-		typedef iterator<T> const_iterator;
+		typedef iterator<const T> const_iterator;
 		typedef iterator<T> iterator;
 		typedef reverse_iterator<const_iterator> const_reverse_iterator;
 		typedef reverse_iterator<iterator> reverse_iterator;
@@ -113,8 +113,8 @@ namespace ft {
 				pos = insert(pos, value);
 		}
 
-		template< class InputIt >
-		void insert( iterator pos, InputIt first, InputIt last) {
+		template <typename _Val, template< typename > class  _InputIterator>
+		void insert( iterator pos, _InputIterator <_Val> first, _InputIterator <_Val> last) {
 			while (first != last)
 				pos = insert(pos, *first++); 
 		}
@@ -243,8 +243,8 @@ namespace ft {
 		}
 
 		friend bool operator==( const ft::vector<T,Allocator>& lhs, const ft::vector<T,Allocator>& rhs ) {
-			iterator i = lhs.begin();
-			iterator j = rhs.begin();
+			const_iterator i = lhs.begin();
+			const_iterator j = rhs.begin();
 
 			while (i != lhs.end() && j != rhs.end())
 			{
@@ -258,34 +258,42 @@ namespace ft {
 			return true;
 		}
 
-		template< class T, class Alloc >
-		bool operator!=( const std::vector<T,Alloc>& lhs,
-            const std::vector<T,Alloc>& rhs ) {
-			iterator i = lhs.begin();
-			iterator j = rhs.begin();
-			while (i != lhs.end() && j != rhs.end())
-			{
-				if (*i != *j)
-					return true;
-				++i;
-				++j;
-			}
-			if (i != lhs.end() || j != rhs.end())
-				return true;
-			return false;
+		friend bool operator!=( const ft::vector<T,Allocator>& lhs,
+            const ft::vector<T,Allocator>& rhs ) {
+			return !(lhs == rhs);
 		}
-		template< class T, class Alloc >
-		bool operator<( const std::vector<T,Alloc>& lhs,
-                const std::vector<T,Alloc>& rhs );
-		template< class T, class Alloc >
-		bool operator<=( const std::vector<T,Alloc>& lhs,
-                 const std::vector<T,Alloc>& rhs );
-		template< class T, class Alloc 
-		bool operator>( const std::vector<T,Alloc>& lhs,
-                const std::vector<T,Alloc>& rhs );
-		template< class T, class Alloc >
-		bool operator>=( const std::vector<T,Alloc>& lhs,
-                 const std::vector<T,Alloc>& rhs );
+
+		friend bool operator<( const ft::vector<T,Allocator>& lhs,
+            const ft::vector<T,Allocator>& rhs ) {
+			if (lhs.size() < rhs.size())
+				return true;
+			else if (lhs.size() > rhs.size())
+				return false;
+			else {
+				for (size_type i = 0; i < lhs._size; ++i) {
+					if (lhs[i] < rhs[i])
+						return true;
+					if (lhs[i] > rhs[i])
+						return false;
+				}
+				return false;
+			}
+		}
+	
+		friend bool operator<=( const ft::vector<T,Allocator>& lhs,
+        	const ft::vector<T,Allocator>& rhs ) {
+			return !(rhs < lhs);
+		}
+
+		friend bool operator>( const ft::vector<T,Allocator>& lhs,
+            const ft::vector<T,Allocator>& rhs ) {
+			return rhs < lhs;
+		}
+		
+		friend bool operator>=( const ft::vector<T,Allocator>& lhs,
+			const ft::vector<T,Allocator>& rhs ) {
+			return !(lhs < rhs);
+		}
 	};
 
 };

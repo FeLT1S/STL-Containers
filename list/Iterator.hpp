@@ -31,7 +31,7 @@ namespace ft
 			_it = copy._it;
 			return *this;
 		}
-		reference operator*() { return _it->__content; }
+		reference operator*() const { return _it->__content; }
 		iterator operator++() { 
 			_it = _it->__next;
 			return *this; 
