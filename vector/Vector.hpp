@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include "Iterator.hpp"
+#include <cstring>
 
 namespace ft {
 
@@ -29,30 +30,60 @@ namespace ft {
 
 		vector() : _size(0), _capacity(0), _array(_alloc.allocate(0)) {}
 		explicit vector( const Allocator& alloc ) : _alloc(alloc), _size(0), _capacity(0), _array(_alloc.allocate(0)) {}
+
 		explicit vector( size_type count, const T& value = T(), const Allocator& alloc = Allocator()) :
-		_alloc(alloc), _size(0), _capacity(count), _array(_alloc.allocate(count)) {
+		_alloc(alloc), _size(count), _capacity(count), _array(_alloc.allocate(_capacity + 1)) {
 			for (size_type i = 0; i != count; ++i)
-				_alloc[i] = value;
+				_alloc.construct(&_array[i], value);
 		}
-		template< class InputIt >
-		vector( InputIt first, InputIt last, const Allocator& alloc = Allocator() ) :
-		_alloc(alloc), _size(0), _capacity(0), _array(_alloc.allocate(_capacity)) {
+
+		template <typename _Val, template< typename > class  _InputIterator>
+		vector( _InputIterator <_Val> first, _InputIterator <_Val> last, const Allocator& alloc = Allocator() ) :
+		_alloc(alloc), _size(0), _capacity(0), _array(_alloc.allocate(_capacity + 1)) {
 			insert(begin(), first, last);
 		}
 		vector( const vector& other ) :
-		_alloc(other._alloc), _size(other._size), _capacity(other._capacity), _array(_alloc.allocate(_capacity)) {
+		_alloc(other._alloc), _size(other._size), _capacity(other._capacity), _array(_alloc.allocate(_capacity + 1)) {
 			for (size_type i = 0; i < _size; ++i)
 				_alloc.construct(_array + i, other._array[i]);
 		}
 
 		void assign( size_type count, const T& value ) {
 			clear();
-			insert(begin(), count, value);
+			_alloc.deallocate(_array, _capacity + 1);
+			_array = _alloc.allocate(count + 1);
+			if (count > _capacity)
+				_capacity = count;
+			while (count--)
+				push_back(value);
 		}
 		template <typename _Val, template< typename > class  _InputIterator>
 		void assign( _InputIterator <_Val> first, _InputIterator <_Val> last ) {
+			if (last - first < 0) {
+				clear();
+				// _alloc.deallocate(_array, _capacity + 1);
+				_capacity = 0;
+				throw std::length_error("vector");
+				// return ;
+			}
+
+			long count = 0;
+			// if (&(*last) <= _array + _size && &(*first) >= _array)
+			count = &(*last) - &(*first);
+			vector<T> tmp;
+			while (first != last)
+				tmp.push_back(*first++);
+			iterator tmp_first = tmp.begin(); 
+			iterator tmp_last = tmp.end();
+
 			clear();
-			insert(begin(), first, last);
+			_alloc.deallocate(_array, _capacity + 1);
+			_array = _alloc.allocate(count + 1);
+			if (count > _capacity)
+				_capacity = count;
+			iterator pos = begin();
+			while (tmp_first != tmp_last)
+				pos = insert(pos, *tmp_first++); 
 		}
 
 		allocator_type get_allocator() const {
@@ -67,7 +98,7 @@ namespace ft {
 		~vector() {
 			for (size_type i = 0; i < _size; ++i)
 				_alloc.destroy(_array + i);
-			_alloc.deallocate(_array, _capacity);
+			_alloc.deallocate(_array, _capacity + 1);
 		}
 
 		//MODIFIED
@@ -85,38 +116,53 @@ namespace ft {
 		}
 
 		void push_back( const T& value ) {
-			if (_size + 1 > _capacity)
-				add_capacity(1);
-			_alloc.construct(&_array[_size++], value);
+			insert(end(), value);
 		}
 
 		iterator insert( iterator pos, const T& value ) {
+			unsigned long tmp = 0;
+			bool check = false;
 			if (_capacity == 0)
 			{
 				add_capacity(1);
 				pos = begin();
 			}
 			else if (_size + 1 > _capacity) {
+				if (&value >= _array && &value <= _array + _size && (check = true))
+					tmp = &value - _array;
 				long size = pos - begin();
 				add_capacity(1);
 				pos = begin() + size;
 			}
-			for (size_type i = &(*pos) - _array; i < _size; ++i)
-				_alloc.construct(&_array[i + 1], _array[i]);
-			_alloc.construct(&(*pos), value);
+			size_type i = &(*pos) - _array;
+			std::memmove((void*)&_array[i + 1], (void*)&_array[i], (_size - i) * sizeof(value_type));
+			if (!check)
+				_alloc.construct(&(*pos), value);
+			else
+				_alloc.construct(&(*pos), _array[tmp]);
 			++_size;
 			return ++pos;
 		}
 
 		void insert( iterator pos, size_type count, const T& value ) {
+			T tmp;
+			// if (&value >= _array && &value <= _array + _size)
+				tmp = value;
 			while (count--)
-				pos = insert(pos, value);
+				pos = insert(pos, tmp);
 		}
 
 		template <typename _Val, template< typename > class  _InputIterator>
 		void insert( iterator pos, _InputIterator <_Val> first, _InputIterator <_Val> last) {
+			if (last - first < 0)
+				throw std::length_error("vector");
+			vector<T> tmp;
 			while (first != last)
-				pos = insert(pos, *first++); 
+				tmp.push_back(*first++);
+			iterator tmp_first = tmp.begin(); 
+			iterator tmp_last = tmp.end();
+			while (tmp_first != tmp_last)
+				pos = insert(pos, *tmp_first++); 
 		}
 
 		iterator erase( iterator pos ) {
@@ -146,14 +192,14 @@ namespace ft {
 			std::swap(_alloc, other._alloc);
 		}
 
-		void resize( size_type count ) {
+		void resize( size_type count, value_type value = value_type() ) {
 			if (count < _size) {
 				erase(&_array[count], end());
 			}
 			else if (count > _size) {
 				add_capacity(count - _size);
 				for (size_type i = _size; i != count; ++i)
-					push_back(T());
+					push_back(value);
 			}
 			_size = count;
 		}
@@ -162,12 +208,12 @@ namespace ft {
 
 		reference at( size_type pos ) {
 			if (pos > _size)
-				throw std::out_of_range("Array index out of bounds");
+				throw std::out_of_range("vector");
 			return _array[pos];
 		}
 		const_reference at( size_type pos ) const {
 			if (pos > _size)
-				throw std::out_of_range("Array index out of bounds");
+				throw std::out_of_range("vector");
 			return _array[pos];
 		}
 		reference operator[]( size_type pos ) {return _array[pos];}
@@ -211,10 +257,12 @@ namespace ft {
 			while (new_capacity < _capacity + added) {
 				new_capacity *= 2;
 			}
-			pointer tmp = _alloc.allocate(new_capacity);
+			if (new_capacity > max_size())
+				throw std::length_error("vector");
+			pointer tmp = _alloc.allocate(new_capacity + 1);
 			for (size_type i = 0; i != _size; ++i)
 				_alloc.construct(tmp + i, _array[i]);
-			_alloc.deallocate(_array, _capacity);
+			_alloc.deallocate(_array, _capacity + 1);
 			_array = tmp;
 			_capacity = new_capacity;
 		}
@@ -236,7 +284,7 @@ namespace ft {
 				pointer tmp = _alloc.allocate(new_cap);
 				for (size_type i = 0; i != _size; ++i)
 					_alloc.construct(&tmp[i], _array[i]);
-				_alloc.deallocate(_array, _capacity);
+				_alloc.deallocate(_array, _capacity + 1);
 				_array = tmp;
 				_capacity = new_cap;
 			}

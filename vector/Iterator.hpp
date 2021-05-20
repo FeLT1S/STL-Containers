@@ -75,7 +75,7 @@ public:
 		friend bool operator!= (const iterator &c1, const iterator &c2) {
 			return c1._it != c2._it;
 		}
-		pointer operator->() {return &_it;}
+		pointer operator->() {return &(*_it);}
 		reference operator[]( size_type pos ) const {return _it[pos];}
 	};
 
