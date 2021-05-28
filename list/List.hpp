@@ -42,7 +42,6 @@ namespace ft
 			_head->__prev = NULL;
 			_head->__next = NULL;
 			_size = 0;
-			alloc.construct(&_head->__content, T());
 		}
 
 		explicit list(const Allocator& _alloc) : _head(_node_alloc.allocate(1)), _tail(_head) {
@@ -50,7 +49,6 @@ namespace ft
 			_head->__next = NULL;
 			_size = 0;
 			alloc = _alloc;
-			alloc.construct(&_head->__content, T());
 		}
 
 		explicit list(size_type count, const T& value = T(), const Allocator& _alloc = Allocator()) :
@@ -190,7 +188,6 @@ namespace ft
 				alloc.construct(&new_node->__content, value);
 
 				s_node * prev = node->__prev;
-				new_node->__content = value;
 				new_node->__prev = node->__prev;
 				new_node->__next = prev->__next;
 
@@ -322,6 +319,8 @@ namespace ft
 				node_pos->__prev->__next = node_first;
 			else
 				_head = node_first;
+			if(node_last->__next == other._tail)
+				other._tail->__prev = node_first->__prev;
 			if (node_first != other._head)
 				node_first->__prev->__next = node_last->__next;
 			else
@@ -329,6 +328,8 @@ namespace ft
 			s_node *tmp = node_pos->__prev;
 			node_pos->__prev = node_last;
 			node_last->__next->__prev = node_first->__prev;
+			if (node_first->__prev)
+				node_first->__prev->__next = node_last->__next->__next;
 			node_first->__prev = tmp;
 			node_last->__next = node_pos;
 		}

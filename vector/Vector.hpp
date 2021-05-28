@@ -110,7 +110,6 @@ namespace ft {
 		void clear() {
 			for (iterator it = begin(); it != end(); ++it) {
 				_alloc.destroy(&(*it));
-				*it = T();
 			}
 			_size = 0;
 		}
@@ -145,15 +144,31 @@ namespace ft {
 		}
 
 		void insert( iterator pos, size_type count, const T& value ) {
-			T tmp;
-			// if (&value >= _array && &value <= _array + _size)
-				tmp = value;
+			value_type tmp = value;
 			while (count--)
 				pos = insert(pos, tmp);
 		}
 
 		template <typename _Val, template< typename > class  _InputIterator>
 		void insert( iterator pos, _InputIterator <_Val> first, _InputIterator <_Val> last) {
+			// if (last - first < 0)
+			// 	throw std::length_error("vector");
+			// vector<T> tmp;
+			// while (first != last)
+			// 	tmp.push_back(*first++);
+			// iterator tmp_first = tmp.begin(); 
+			// iterator tmp_last = tmp.end();
+			// if (_capacity < _size + tmp.size()) {
+			// 	long size = pos - begin();
+			// 	add_capacity(tmp._size, true);
+			// 	pos = begin() + size;
+			// }
+			// size_type i = &(*pos) - _array;
+			// std::memmove((void*)&_array[i + tmp.size()], (void*)&_array[i], (_size - i) * sizeof(value_type));
+			// while (tmp_first != tmp_last) {
+			// 	_alloc.construct(&(*pos), *tmp_first++);
+			// 	++pos;
+			// }
 			if (last - first < 0)
 				throw std::length_error("vector");
 			vector<T> tmp;
@@ -162,13 +177,17 @@ namespace ft {
 			iterator tmp_first = tmp.begin(); 
 			iterator tmp_last = tmp.end();
 			while (tmp_first != tmp_last)
-				pos = insert(pos, *tmp_first++); 
+				pos = insert(pos, *tmp_first++);
 		}
 
 		iterator erase( iterator pos ) {
 			_alloc.destroy(&(*pos));
-			for (size_type i = &(*pos) - _array; i < _size - 1; ++i)
-				_alloc.construct(_array + i, _array[i + 1]);
+
+
+			size_type i = &(*pos) - _array;
+			std::memmove((void*)&_array[i], (void*)&_array[i + 1], (_size - i) * sizeof(value_type));
+			// for (size_type i = &(*pos) - _array; i < _size - 1; ++i)
+			// 	_alloc.construct(_array + i, _array[i + 1]);
 			_alloc.destroy(_array + --_size);
 			return pos;
 		}
@@ -252,16 +271,22 @@ namespace ft {
 
 		//CAPACITY
 	private:
-		void add_capacity(size_type added = 0) {
+		void add_capacity(size_type added, bool fixed_capacity = false) {
 			size_type  new_capacity = _capacity == 0 ? 1 : _capacity;
-			while (new_capacity < _capacity + added) {
-				new_capacity *= 2;
+			if (fixed_capacity)
+				new_capacity += added;
+			else {
+				while (new_capacity < _capacity + added) {
+					new_capacity *= 2;
+				}
 			}
 			if (new_capacity > max_size())
 				throw std::length_error("vector");
 			pointer tmp = _alloc.allocate(new_capacity + 1);
 			for (size_type i = 0; i != _size; ++i)
 				_alloc.construct(tmp + i, _array[i]);
+			for (size_type i = 0; i != _size; ++i)
+				_alloc.destroy(&_array[i]);
 			_alloc.deallocate(_array, _capacity + 1);
 			_array = tmp;
 			_capacity = new_capacity;
