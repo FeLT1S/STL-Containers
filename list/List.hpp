@@ -25,9 +25,9 @@ namespace ft
 		typedef iterator<T> iterator;
 		typedef reverse_iterator<const_iterator> const_reverse_iterator;
 		typedef reverse_iterator<iterator> reverse_iterator;
-		typedef	std::allocator<s_node>	node_allocator;
-		typedef size_t size_type;
 		typedef Allocator allocator_type;
+		typedef typename allocator_type::template rebind<s_node>::other node_allocator;
+		typedef size_t size_type;
 		typedef typename allocator_type::reference reference;
 		typedef typename allocator_type::const_reference const_reference;
 		typedef typename allocator_type::pointer pointer;

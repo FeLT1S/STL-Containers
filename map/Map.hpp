@@ -25,6 +25,7 @@ struct pair {
 	pair( const T1& x, const T2& y ) : first(x), second(y){}
 	template< class U1, class U2 >
 	pair( const pair<U1, U2>& p ) : first(p.first), second(p.second) {}
+	~pair() {}
 	pair& operator=( const pair& other ) {
 		first = other.first;
 		second = other.second;
@@ -59,7 +60,6 @@ struct pair {
 	}
 };
 
-
 //AVL_TREE
 template<typename T>
 class avl_tree {
@@ -75,15 +75,19 @@ public:
 		node(T k) : key(k) {left = right = 0; height = 1; parent = 0;}
 		node(const node& copy) : key(copy.key), height(copy.height), left(copy.left), right(copy.right), parent(copy.parent) {}
 	};
+	typedef std::allocator<T> allocator_type;
+	typedef typename allocator_type::template rebind<node>::other	node_alloc_type;
 private:
+	node_alloc_type node_alloc;
+	allocator_type alloc;
 	node *root;
 	node *end;
 public:
-	avl_tree() : root(new node), end(root){}
+	avl_tree() : root(node_alloc.allocate(1)), end(root) {node_alloc.construct(root);}
 	unsigned char get_height(node* p) {
 		return p ? p->height : 0;
 	}
-	node *get_end() {
+	node *get_end() const{
 		return end;
 	}
 private:
@@ -92,16 +96,18 @@ private:
 			take_phantom(p->right);
 		else {
 			p->parent->right = 0;
-			end = NULL;
-			delete p;
+			// end = NULL;
+			// alloc.destroy(&p->key);
+			// node_alloc.deallocate(p, 1);
 		}
 	}
 
 	void take_phantom() {
 		if (!root->left && !root->right) {
-			delete root;
+			// alloc.destroy(&root->key);
+			// node_alloc.deallocate(root, 1);
 			root = NULL;
-			end = NULL;
+			// end = NULL;
 			return ;
 		}
 		if (root->right)
@@ -112,19 +118,27 @@ private:
 		if (p->right)
 			push_phantom(p->right);
 		else {
-			p->right = new node;
-			p->right->parent = p;
-			end = p->right;
+			// p->right = node_alloc.allocate(1);
+			p->right = end;
+			// node_alloc.construct(p->right);
+			end->parent = p;
+			// end = p->right;
 		}
 	}
 
 	void push_phantom() {
+		if (!root) {
+			root = end;
+			return ;
+		}
 		if (root->right)
 			push_phantom(root->right);
 		else {
-			root->right = new node;
-			root->right->parent = root;
-			end = root->right;
+			root->right = end;
+			// root->right = node_alloc.allocate(1);
+			// node_alloc.construct(root->right);
+			end->parent = root;
+			// end = root->right;
 		}
 	}
 
@@ -201,9 +215,10 @@ private:
 	node* insert(node* prev, node* p, T k)
 	{
 		if( !p ) {
-			node* tmp = new node(k);
-			tmp->parent = prev;
-			return tmp;
+			p = node_alloc.allocate(1);
+			node_alloc.construct(p, k);
+			p->parent = prev;
+			return p;
 		}
 		if( k < p->key )
 			p->left = insert(p, p->left, k);
@@ -225,7 +240,8 @@ private:
 			node *q = p->left;
 			node *r = p->right;
 			node *parents = p->parent;
-			// node_alc.deallocate(p, 1);
+			alloc.destroy(&p->key);
+			node_alloc.deallocate(p, 1);
 			p = NULL;
 			if (q)
 			{
@@ -268,11 +284,29 @@ public:
 		return p->right ? findmax(p->right) : p; 
 	}
 
+	void insert(node *elem, T k)
+	{
+		take_phantom();
+		if( !elem ) {
+			elem = node_alloc.allocate(1);
+			node_alloc.construct(elem, k);
+			push_phantom();
+			return ;
+		}
+		if(k < elem->key)
+			elem->left = insert(elem, elem->left, k);
+		else
+			elem->right = insert(elem, elem->right, k);
+		elem = balance(elem);
+		push_phantom();
+	}
+
 	void insert(T k)
 	{
 		take_phantom();
 		if( !root ) {
-			root = new node(k);
+			root = node_alloc.allocate(1);
+			node_alloc.construct(root, k);
 			push_phantom();
 			return ;
 		}
@@ -298,6 +332,8 @@ public:
 			node *q = root->left;
 			node *r = root->right;
 			node *parents = root->parent;
+			alloc.destroy(&root->key);
+			node_alloc.deallocate(root, 1);
 			root = NULL;
 			if (q)
 			{
@@ -328,10 +364,28 @@ public:
 				return ;
 			}
 		}
-		root = balance(root);
+		// root = balance(root);
 		push_phantom();
 	}
 
+	void clear_tree(node *node) {
+		if (node->left) clear_tree(node->left);
+		if (node->right) clear_tree(node->right);
+		alloc.destroy(&node->key);
+		node_alloc.deallocate(node, 1);
+	}
+
+	void clear_tree() {
+		clear_tree(root);
+	}
+
+	~avl_tree() {
+		clear_tree(root);
+	}
+
+	size_t max_size() const {
+		return node_alloc.max_size();
+	}
 };
 
 //CLASS MAP
@@ -339,12 +393,12 @@ public:
 template<class Key,
 	class T,
 	class Compare = ft::less<Key>,
-	class Allocator = std::allocator<ft::pair<const Key, T> > >
+	class Allocator = std::allocator<std::pair<const Key, T> > >
 class map {
 public:
 	typedef Key key_type;
 	typedef T mapped_type;
-	typedef ft::pair<const Key, T> value_type;
+	typedef std::pair<const Key, T> value_type;
 	typedef size_t size_type;
 	typedef Compare key_compare;
 	typedef Allocator allocator_type;
@@ -352,40 +406,158 @@ public:
 	typedef const value_type const_reference;
 	typedef typename Allocator::pointer pointer;
 	typedef typename Allocator::const_pointer const_pointer;
+	typedef iterator<const value_type> const_iterator;
 	typedef iterator<value_type> iterator;
+	typedef reverse_iterator<const_iterator> const_reverse_iterator;
+	typedef reverse_iterator<iterator> reverse_iterator;
 private:
-	avl_tree<value_type> container;
+	avl_tree<value_type> _container;
+	key_compare _comp;
+	allocator_type _alloc;
+	size_type _size;
+
 public:
+	explicit map (const key_compare& comp = key_compare(), const allocator_type& alloc = allocator_type())
+	: _comp(comp), _alloc(alloc), _size(0) {}
+
+	template <typename _Val, template< typename > class  _InputIterator>
+	map (_InputIterator <_Val > first, _InputIterator <_Val > last, const key_compare& comp = key_compare(), const allocator_type& alloc = allocator_type())
+	: _comp(comp), _alloc(alloc) {
+		while (first != last) {
+			_container.insert(*first++);
+			++_size;
+		}
+	}
+
+	map (const map& x) : _size(x._size) {
+		for (const_iterator it = x.begin(); it != x.end(); it++)
+			_container.insert(*it);
+	}
+
+	~map() {}
+
 	iterator begin() {
-		return container.findmin();
+		return _container.findmin();
 	}
 	iterator end() {
-		return container.get_end();
+		return _container.get_end();
 	}
-	std::pair<iterator, bool> insert( const value_type& value ) {
+
+	const_iterator begin() const {
+		return iterator(_container.findmin());
+	}
+
+	const_iterator end() const {
+		return iterator(_container.get_end());
+	}
+
+    reverse_iterator rbegin() {
+		return reverse_iterator(_container.get_end());}
+
+	const_reverse_iterator rbegin() const {
+		return reverse_iterator(_container.get_end());
+	}
+
+    reverse_iterator rend() {
+		return reverse_iterator(_container.findmin());
+	}
+	const_reverse_iterator rend() const {
+		return reverse_iterator(_container.findmin());
+	}
+
+	bool empty() const {
+		return !(_size);
+	}
+
+	size_type size() const {
+		return _size;
+	}
+
+	size_t max_size() const {
+		return _container.max_size();
+	}
+
+	mapped_type& operator[] (const key_type& k) {
+		for(iterator i = begin(); i != end(); ++i) {
+			if (i->first == k)
+				return i->second;
+		}
+		return insert(value_type(k, mapped_type())).first->second;
+	}
+
+	pair<iterator, bool> insert( const value_type& value ) {
 		iterator it = begin();
-		for (; it != end(); ++it)
+		while (it != end())
 		{
 			if (it->first == value.first)
-				return (std::pair<iterator, bool>(it, 0));
+				return (pair<iterator, bool>(it, 0));
+			++it;
 		}
-		container.insert(value);
-		return (std::pair<iterator, bool>(it, 1));
+		_container.insert(value);
+		++_size;
+		it = begin();
+		while (it != end())
+		{
+			if (it->first == value.first)
+				break ;
+			++it;
+		}
+		return (pair<iterator, bool>(it, 1));
+	}
+
+	iterator insert(iterator position, const value_type& val) {
+		iterator next = position--;
+		if (position.getData() && position->first < val.first && next->first > val.first) {
+			_container.insert(position.getData(), val);
+			return ++position;
+		}
+		else
+			return insert(val).first;
+	}
+
+	template <typename _Val, template< typename > class  _InputIterator>
+	void insert(_InputIterator <_Val > first, _InputIterator <_Val > last) {
+		while (first != last)
+		{
+			_size++;
+			_container.insert(*first++);
+		}
 	}
 
 	void erase (iterator position) {
-		container.remove(*position);
+		_container.remove(*position);
+		--_size;
 	}
+
 	size_type erase (const key_type& k) {
 		size_type count = 0;
 		for (iterator it = begin(); it != end(); ++it)
 		{
 			if (it->first == k) {
-				container.remove(*it);
+				_container.remove(*it);
 				count++;
+				--_size;
 			}
 		}
 		return count;
+	}
+
+	void erase (iterator first, iterator last) {
+		while (first != last) {
+			iterator tmp = first++;
+			erase(tmp);
+		}
+	}
+
+	void swap (map& x);
+
+	void clear() {
+		iterator first = begin();
+		iterator last = end();
+		while (first != last) {
+			iterator tmp = first++;
+			erase(tmp);
+		}
 	}
 };
 

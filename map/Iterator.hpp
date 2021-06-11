@@ -12,13 +12,14 @@ namespace ft
 	{
 	public:
 		typedef typename avl_tree<T>::node node;
+		typedef typename avl_tree<const T>::node const_node;
 		typedef T value_type;
 		typedef T* pointer;
 		typedef T& reference;
 
 		template <template <typename> class const_iterator>
-		operator const_iterator<const value_type>() {
-			return const_iterator<const value_type>((node)_it);
+		operator const_iterator<const T>() { 
+			return const_iterator<const T>((const_node *)_it); 
 		}
 	private:
 		node *_it;
@@ -27,15 +28,14 @@ namespace ft
 		node* findmin(node* p) const {
 		return p->left ? findmin(p->left) : p;
 		}
-
 		node* findmax(node *p) const { 
 		return p->right ? findmax(p->right) : p; 
 		}
 	public:
 		iterator() : _it(NULL) {}
 		iterator(node *it) : _it(it) {}
-		iterator(const iterator &copy) : _it(copy._it) {}
 		node *getData() {return _it;}
+		iterator(const iterator &copy) : _it(copy._it) {}
 		iterator& operator=(const iterator &copy) {
 			_it = copy._it;
 			return *this;
@@ -57,8 +57,8 @@ namespace ft
 			return (*this);
 		}
 		iterator operator--() { 
-			if (_it->_left)
-				_it = findmax(_it->_left);
+			if (_it->left)
+				_it = findmax(_it->left);
 			else
 			{
 				while (_it->parent && _it->parent->left == _it)
