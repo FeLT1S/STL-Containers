@@ -118,9 +118,17 @@ namespace ft
 		allocator_type get_allocator() const {
 			return _head->__alloc;
 		}
+		
+		reference front() {
+			return _head->__content;
+		}
 
 		const_reference front() const {
 			return _head->__content;
+		}
+
+		reference back() {
+			return _tail->__prev->__content;
 		}
 
 		const_reference back() const {
@@ -329,7 +337,7 @@ namespace ft
 			node_pos->__prev = node_last;
 			node_last->__next->__prev = node_first->__prev;
 			if (node_first->__prev)
-				node_first->__prev->__next = node_last->__next->__next;
+				node_first->__prev->__next = node_last->__next;
 			node_first->__prev = tmp;
 			node_last->__next = node_pos;
 		}

@@ -3,16 +3,16 @@
 #include "Map.hpp"
 
 namespace ft
-{	
-	template<class T>
-	class avl_tree;
+{
+	template <typename T>
+	struct node;
 
 	template<class T>
 	class iterator
 	{
 	public:
-		typedef typename avl_tree<T>::node node;
-		typedef typename avl_tree<const T>::node const_node;
+		typedef node<const T> const_node;
+		typedef node<T> node;
 		typedef T value_type;
 		typedef T* pointer;
 		typedef T& reference;
@@ -23,7 +23,6 @@ namespace ft
 		}
 	private:
 		node *_it;
-		avl_tree<T> tree;
 
 		node* findmin(node* p) const {
 		return p->left ? findmin(p->left) : p;
@@ -44,27 +43,21 @@ namespace ft
 		iterator operator++() {
 			if (_it->right)
 				_it = findmin(_it->right);
-			else if (_it != tree.get_end())
-			{
+			else {
 				while (_it->parent && _it->parent->right == _it)
 					_it = _it->parent;
 				_it = _it->parent;
-				if (_it == NULL)
-					_it = tree.get_end();
 			}
-			else
-				_it->left->parent = NULL;
 			return (*this);
 		}
 		iterator operator--() { 
 			if (_it->left)
 				_it = findmax(_it->left);
-			else
-			{
+			else {
 				while (_it->parent && _it->parent->left == _it)
 					_it = _it->parent;
 				_it = _it->parent;
-		}
+			}
 		return (*this);
 		}
 		iterator operator++(int) {

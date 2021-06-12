@@ -28,22 +28,22 @@ namespace ft {
 	public:
 		//CONSTRUCTORS, DESTRUCTOR
 
-		vector() : _size(0), _capacity(0), _array(_alloc.allocate(0)) {}
+		vector() : _capacity(0), _size(0), _array(_alloc.allocate(0)) {}
 		explicit vector( const Allocator& alloc ) : _alloc(alloc), _size(0), _capacity(0), _array(_alloc.allocate(0)) {}
 
 		explicit vector( size_type count, const T& value = T(), const Allocator& alloc = Allocator()) :
-		_alloc(alloc), _size(count), _capacity(count), _array(_alloc.allocate(_capacity + 1)) {
+		 _alloc(alloc), _capacity(count), _size(count), _array(_alloc.allocate(_capacity + 1)) {
 			for (size_type i = 0; i != count; ++i)
 				_alloc.construct(&_array[i], value);
 		}
 
 		template <typename _Val, template< typename > class  _InputIterator>
 		vector( _InputIterator <_Val> first, _InputIterator <_Val> last, const Allocator& alloc = Allocator() ) :
-		_alloc(alloc), _size(0), _capacity(0), _array(_alloc.allocate(_capacity + 1)) {
+		_alloc(alloc), _capacity(0), _size(0), _array(_alloc.allocate(_capacity + 1)) {
 			insert(begin(), first, last);
 		}
 		vector( const vector& other ) :
-		_alloc(other._alloc), _size(other._size), _capacity(other._capacity), _array(_alloc.allocate(_capacity + 1)) {
+		_alloc(other._alloc), _capacity(other._capacity), _size(other._size), _array(_alloc.allocate(_capacity + 1)) {
 			for (size_type i = 0; i < _size; ++i)
 				_alloc.construct(_array + i, other._array[i]);
 		}
@@ -79,7 +79,7 @@ namespace ft {
 			clear();
 			_alloc.deallocate(_array, _capacity + 1);
 			_array = _alloc.allocate(count + 1);
-			if (count > _capacity)
+			if ((unsigned long)count > _capacity)
 				_capacity = count;
 			iterator pos = begin();
 			while (tmp_first != tmp_last)
